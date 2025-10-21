@@ -91,7 +91,7 @@ services:
       my_network:
         aliases:
          - mqtt-bridge
-#    restart: unless-stopped
+    restart: unless-stopped
 
 volumes:
   grafana_storage: {}
