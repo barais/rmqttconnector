@@ -46,7 +46,7 @@ The application loads its configuration from environment variables and a mapping
 | `MQTT_PORT`      | MQTT broker port                            | `1883`                                                |
 | `MQTT_USER`      | MQTT username                               | *(optional)*                                          |
 | `MQTT_PASS`      | MQTT password                               | *(optional)*                                          |
-| `MQTT_CLIENT_ID` | Client identifier                           | `mqtt_to_timescale_sqlx`                              |
+`mqtt_to_timescale_sqlx`                              |
 | `DATABASE_URL`   | PostgreSQL / TimescaleDB connection string  | `postgres://postgres:postgres@localhost:5432/metrics` |
 | `APP_USER_ID`    | The user ID inserted in the `metrics` table | `1`                                                   |
 | `MAPPINGS_FILE`  | Path to topic-to-device mapping JSON file   | `mappings.json`                                       |
@@ -60,10 +60,10 @@ Example:
 
 ```json
 [
-  { "topic": "devices/heater/1", "device_id": "heater-1" },
-  { "topic": "devices/heater/2", "device_id": "heater-2" },
-  { "topic": "sensors/+/events", "device_id": "generic-sensor" },
-  { "topic": "plants/#", "device_id": "plants-group" }
+  { "topic": "devices/heater/1", "user_id": 1 },
+  { "topic": "devices/heater/2", "user_id": 2 },
+  { "topic": "sensors/+/events", "user_id": 1 },
+  { "topic": "plants/#", "user_id": 2 }
 ]
 ```
 
