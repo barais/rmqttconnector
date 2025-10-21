@@ -1,0 +1,104 @@
+services:
+  grafana:
+    image: grafana/grafana-oss
+    container_name: grafana
+    restart: always
+    environment:
+#     - GF_SERVER_ROOT_URL=http://my.grafana.server/
+     - GF_INSTALL_PLUGINS=grafana-clock-panel
+    ports:
+     - '3000:3000'
+    volumes:
+     - 'grafana_storage:/var/lib/grafana'
+    networks:
+      my_network:
+        aliases:
+          - grafana
+
+  timescaledb:
+    image: timescale/timescaledb-ha:pg16
+    container_name: timescaledb
+    restart: always
+    environment:
+     - POSTGRES_USER=postgres
+     - POSTGRES_DB=postgres
+     - POSTGRES_PASSWORD=password
+    ports:
+     - '5434:5432'
+    volumes:
+      - local_pgdata:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      my_network:
+        aliases:
+          - timescaledb
+  pgadmin:
+    image: dpage/pgadmin4:8.11.0
+    container_name: pgadmin4_timescale
+    restart: always
+    ports:
+      - "8888:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=test@test.com
+      - PGADMIN_DEFAULT_PASSWORD=test
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      my_network:
+        aliases:
+         - pgadmin    
+
+  rmqtt:
+    container_name: rmqtt
+    image: rmqtt/rmqtt:latest
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - ./docker/etc/:/app/rmqtt/etc
+      - ./docker/log/rmqtt:/var/log/rmqtt
+    ports:
+      - "1883:1883"
+#      - "8883:8883"
+#      - "11883:11883"
+#      - "6063:6060"
+    restart: always
+    command: -f /app/rmqtt/etc/rmqtt.toml --id 1
+    privileged:
+      true
+    ulimits:
+      nofile:
+        soft: 335000
+        hard: 335000
+    networks:
+      my_network:
+        aliases:
+         - rmqtt
+  mqtt-bridge:  
+    container_name: mqtt-bridge
+    build: .
+    depends_on:
+      - timescaledb
+      - rmqtt
+    environment:
+      - MQTT_HOST=rmqtt
+      - MQTT_PORT=1883
+      - MQTT_USER=mqtt
+      - MQTT_PASSWORD=password
+      - DATABASE_URL=postgres://postgres:password@timescaledb:5432/postgres
+      - MAPPINGS_FILE=/etc/mqtt_to_timescale/mappings.json
+    volumes:
+      - ./mappings.json:/etc/mqtt_to_timescale/mappings.json:ro
+    networks:
+      my_network:
+        aliases:
+         - mqtt-bridge
+#    restart: unless-stopped
+
+volumes:
+  grafana_storage: {}
+  local_pgdata: {}
+  pgadmin-data: {}
+
+
+networks:
+  my_network:
+    driver: bridge
