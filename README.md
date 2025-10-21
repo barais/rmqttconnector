@@ -134,7 +134,7 @@ If the PostgreSQL connection fails, the pool is recreated with exponential backo
 - dotenv
 - anyhow
 
-## 🧰 Example .env
+## 🧰 Example .env
 
 
 ```txt
@@ -146,7 +146,7 @@ DATABASE_URL=postgres://postgres:postgres@localhost:5432/metrics
 MAPPINGS_FILE=mappings.json
 ```
 
-## 🧩 Future Improvements
+## 🧩 Future Improvements
 
 - [ ] Buffered storage for messages during DB outages
 - [ ] Structured logging with tracing
@@ -155,6 +155,6 @@ MAPPINGS_FILE=mappings.json
 - [ ] Healthcheck endpoint for observability
 
 
-## 🪪 License
+## 🪪 License
 MIT License © 2025
 Created by [Olivier Barais]
