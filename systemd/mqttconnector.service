@@ -1,0 +1,10 @@
+[Unit]
+Description=mqttconnector
+
+[Service]
+ExecStart=/home/barais/rmqttconnector/rmqttconnector
+EnvironmentFile=/etc/mqttconnector/mqttconnector.conf
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
