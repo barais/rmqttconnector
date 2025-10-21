@@ -150,7 +150,8 @@ MAPPINGS_FILE=mappings.json
 
 - [ ] Buffered storage for messages during DB outages
 - [ ] Structured logging with tracing
-- [ ] Dockerfile and systemd service unit
+- [ ] Dockerfile 
+- [x] systemd service unit
 - [ ] Healthcheck endpoint for observability
 
 
