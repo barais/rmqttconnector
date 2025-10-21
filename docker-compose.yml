@@ -82,7 +82,7 @@ services:
       - MQTT_HOST=rmqtt
       - MQTT_PORT=1883
       - MQTT_USER=mqtt
-      - MQTT_PASSWORD=password
+      - MQTT_PASS=password
       - DATABASE_URL=postgres://postgres:password@timescaledb:5432/postgres
       - MAPPINGS_FILE=/etc/mqtt_to_timescale/mappings.json
     volumes:
@@ -102,3 +102,4 @@ volumes:
 networks:
   my_network:
     driver: bridge
+    enable_ipv6: false
