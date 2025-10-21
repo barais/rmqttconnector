@@ -118,13 +118,13 @@ INSERT INTO metrics (time, user_id, device_id, data)
 VALUES (NOW(), 1, 'c4282185-499e-4743-84b3-697b05068ffc', '{"energy":4403342,"temp1":12.8,...}'::jsonb);
 ```
 
-## 🔄 Reconnection Logic
+## 🔄 Reconnection Logic
 
 If the MQTT connection drops, the client automatically reconnects and re-subscribes to all topics.
 
 If the PostgreSQL connection fails, the pool is recreated with exponential backoff, and the failed message is retried once.
 
-## 📦 Dependencies
+## 📦 Dependencies
 
 - tokio
 - rumqttc
