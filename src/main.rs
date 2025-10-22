@@ -4,7 +4,6 @@ use rand::Rng;
 use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS};
 use serde::Deserialize;
 use serde_json::Value;
-use sqlx::types::Json;
 use sqlx::Pool;
 use sqlx::Postgres;
 use std::env;
@@ -14,7 +13,7 @@ use tokio::time::sleep;
 
 #[derive(Debug, Deserialize, Clone)]
 struct TopicMapping {
-    topic: String,      // peut contenir + et #
+    topic: String, // peut contenir + et #
     user_id: i64,  // device_id à insérer
 }
 
@@ -93,7 +92,13 @@ async fn reconnect_pg(database_url: &str) -> Pool<Postgres> {
     }
 }
 /// Connecte MQTT (création client + eventloop)
-fn create_mqtt(host: &str, port: u16, user: Option<&str>, pass: Option<&str>, client_id: &str) -> (AsyncClient, EventLoop) {
+fn create_mqtt(
+    host: &str,
+    port: u16,
+    user: Option<&str>,
+    pass: Option<&str>,
+    client_id: &str,
+) -> (AsyncClient, EventLoop) {
     let mut mqttoptions = MqttOptions::new(client_id, host, port);
     mqttoptions.set_keep_alive(Duration::from_secs(30));
     if let (Some(u), Some(p)) = (user, pass) {
@@ -101,7 +106,6 @@ fn create_mqtt(host: &str, port: u16, user: Option<&str>, pass: Option<&str>, cl
     }
     AsyncClient::new(mqttoptions, 10)
 }
-
 
 /// Reconnection MQTT avec backoff et re-subscribe à la liste de topics
 async fn reconnect_mqtt(
@@ -125,7 +129,10 @@ async fn reconnect_mqtt(
             }
         }
         if ok {
-            println!("✅ Reconnected to MQTT and subscribed to {} topics", topics.len());
+            println!(
+                "✅ Reconnected to MQTT and subscribed to {} topics",
+                topics.len()
+            );
             return (client, eventloop);
         } else {
             eprintln!("⚠️ Will retry MQTT connect in {}s...", delay);
@@ -144,7 +151,7 @@ async fn run(
     mqtt_pass: Option<String>,
     mqtt_client_id: String,
     mappings: Vec<TopicMapping>,
-    pg_conn: String
+    pg_conn: String,
 ) -> Result<()> {
     // Prépare la liste de topics à subscribe (unique)
     let mut topics: Vec<String> = Vec::new();
@@ -159,7 +166,7 @@ async fn run(
     let mut pool = create_pg_pool(&pg_conn)
         .await
         .map_err(|e| anyhow::anyhow!("initial pg pool error: {}", e))?;
-//    let mut pg_client = connect_postgres(&pg_conn).await?;
+    //    let mut pg_client = connect_postgres(&pg_conn).await?;
     let (mut mqtt_client, mut eventloop) = create_mqtt(
         &mqtt_host,
         mqtt_port,
@@ -193,38 +200,47 @@ async fn run(
                     } else {
                         rand::thread_rng().gen_range(0..1000)
                     };
-                    
-                        // parse JSON and try to extract device_id field, fallback to publish.topic as device_id
-                    let device_id_to_use  = match serde_json::from_str::<Value>(text) {
-                            Ok(json_val) => json_val
+
+                    // parse JSON and try to extract device_id field, fallback to publish.topic as device_id
+                    match serde_json::from_str::<Value>(text) {
+                        Ok(json_val) => {
+                            let device_id_to_use = json_val
                                 .get("device_id")
                                 .and_then(|v| v.as_str())
                                 .map(|s| s.to_owned())
-                                .unwrap_or_else(|| user_id_to_use.to_string() ),
-                            Err(_) => user_id_to_use.to_string(),
-                        };
-                    
+                                .unwrap_or_else(|| user_id_to_use.to_string());
 
+                            let q = "INSERT INTO metrics(time, user_id, device_id, data) VALUES (NOW(), $1, $2, $3::jsonb)";
+                            if let Err(e) = sqlx::query(&q)
+                                .bind(&user_id_to_use)
+                                .bind(&device_id_to_use)
+                                .bind(json_val)
+                                .execute(&pool)
+                                .await
+                            {
+                                eprintln!("❌ DB insert error: {}", e);
+                                // On suppose que l'erreur peut être due à une déconnexion : reconnect
+                                pool = reconnect_pg(&pg_conn).await;
+                            } else {
+                                println!(
+                                    "✅ Inserted (device_id='{}') from topic='{}'",
+                                    device_id_to_use, publish.topic
+                                );
+                            }
+                        }
+                        Err(_) => {
+                            // Si JSON invalide, utiliser user_id_to_use comme device_id
+                            println!(
+                                "⚠️ Invalid JSON payload on topic '{}', using device_id='{}'",
+                                publish.topic, user_id_to_use
+                            );
+                        }
+                    };
 
-                            let v: Value = serde_json::from_str(text)?;
-    // Re-sérialiser pour garantir format canonical (optionnel)
-    let serialized = serde_json::to_string(&v)?;
-
-                    // Insert into DB using device_id_to_use
-                    let q = "INSERT INTO metrics(time, user_id, device_id, data) VALUES (NOW(), $1, $2, $3::jsonb)";
-                    if let Err(e) = sqlx::query(&q).bind(&3).bind(&"toto")
-        .bind(Json(&serialized))
-        .execute(&pool)
-        .await {
-                        eprintln!("❌ DB insert error: {}", e);
-                        // On suppose que l'erreur peut être due à une déconnexion : reconnect
-                        pool = reconnect_pg(&pg_conn).await;
-                    } else {
-                        println!(
-                            "✅ Inserted (device_id='{}') from topic='{}'",
-                            device_id_to_use, publish.topic
-                        );
-                    }
+                //                    let v: Value = serde_json::from_str(text)?;
+                // Re-sérialiser pour garantir format canonical (optionnel)
+                //                   let _ = serde_json::to_string(&v)?;
+                // Insert into DB using device_id_to_use
                 } else {
                     eprintln!("⚠️ Payload not utf-8 on topic '{}'", publish.topic);
                 }
@@ -264,9 +280,9 @@ async fn main() -> Result<()> {
     let mqtt_user = env::var("MQTT_USER").ok();
     let mqtt_pass = env::var("MQTT_PASS").ok();
     let mqtt_client_id = env::var("MQTT_CLIENT_ID").unwrap_or_else(|_| "mqtt_to_timescale".into());
-  //  let pg_conn =
-  //      env::var("PG_CONN").unwrap_or_else(|_| "host=localhost port=5434 user=postgres password=password dbname=postgres".into());
-  let database_url = std::env::var("DATABASE_URL")
+    //  let pg_conn =
+    //      env::var("PG_CONN").unwrap_or_else(|_| "host=localhost port=5434 user=postgres password=password dbname=postgres".into());
+    let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:password@localhost:5434/postgres".to_string());
 
     // Fichier de mappings (par défaut "mappings.json")
@@ -289,7 +305,7 @@ async fn main() -> Result<()> {
         mqtt_pass,
         mqtt_client_id,
         mappings,
-        database_url
+        database_url,
     )
     .await
 }
