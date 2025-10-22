@@ -46,7 +46,7 @@ The application loads its configuration from environment variables and a mapping
 | `MQTT_PORT`      | MQTT broker port                            | `1883`                                                |
 | `MQTT_USER`      | MQTT username                               | *(optional)*                                          |
 | `MQTT_PASS`      | MQTT password                               | *(optional)*                                          |
-`mqtt_to_timescale_sqlx`                              |
+| `MQTT_CLIENT_ID` | Client identifier                           | `mqtt_to_timescale_sqlx`                              |
 | `DATABASE_URL`   | PostgreSQL / TimescaleDB connection string  | `postgres://postgres:postgres@localhost:5432/metrics` |
 | `APP_USER_ID`    | The user ID inserted in the `metrics` table | `1`                                                   |
 | `MAPPINGS_FILE`  | Path to topic-to-device mapping JSON file   | `mappings.json`                                       |
@@ -79,7 +79,7 @@ Prerequisites
 - A TimescaleDB / PostgreSQL instance
 
 
-#### Clone and build
+### Clone and build
 
 ```bash
 git clone https://github.com/yourusername/mqtt-to-timescale-sqlx.git
