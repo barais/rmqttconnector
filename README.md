@@ -69,8 +69,38 @@ Example:
 
 You can use MQTT wildcards (+, #) to match multiple topics.
 
+## 🏗️ Build & Run with docker
 
-## 🏗️ Build & Run
+
+```bash
+git clone https://github.com/barais/rmqttconnector/
+# Edit `mappings.json` file to add your own mappings between channel and userId (User id is used for multitenant feature. Each controller will have its own id)
+cd rmqttconnector
+docker compose up -d
+```
+
+Next connect to grafana, http://localhost:3000
+- login: *admin*
+- pass: *admin*
+
+⚠️ In production, you must update this password
+
+In the menu,  add a datasource, Choose postgresql. 
+
+- Host URL: timescaledb:5432
+- Database name: postgres
+- Username: postgres
+- Username: password
+- TLS/SSL Mode: disable
+
+Next in the menu, go to dashboard and select import and copy paste the content of docker/grafana-template.json file for a first template. You can next update the dashboad. 
+
+If you want to test, you can use the simulator which is available here to generate simulation data within the mqtt server. 
+
+
+
+
+## 🏗️ Build & Run without docker
 
 Prerequisites
 
@@ -82,7 +112,7 @@ Prerequisites
 ### Clone and build
 
 ```bash
-git clone https://github.com/yourusername/mqtt-to-timescale-sqlx.git
+git clone https://github.com/barais/rmqttconnector/b
 cd mqtt-to-timescale-sqlx
 cargo build --release
 ```
@@ -145,6 +175,8 @@ MQTT_PASS=mypassword
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/metrics
 MAPPINGS_FILE=mappings.json
 ```
+
+
 
 ## 🧩 Future Improvements
 
